@@ -1,0 +1,16 @@
+import pandas as pd
+import numpy as np
+
+ratings = pd.read_csv('rating.csv')  
+ratings['relevance'] = ratings['rating'].apply(lambda x: 1 if x >= 3.0 else 0)
+user_ids = ratings['userId'].unique()
+movie_ids = ratings['movieId'].unique()
+user_id_to_index = {uid: idx for idx, uid in enumerate(user_ids)}
+movie_id_to_index = {mid: idx for idx, mid in enumerate(movie_ids)}
+num_users = len(user_ids)
+num_items = len(movie_ids)
+relevance_matrix = np.zeros((num_users, num_items), dtype=np.uint8)
+for row in ratings.itertuples():
+    u_idx = user_id_to_index[row.userId]
+    m_idx = movie_id_to_index[row.movieId]
+    relevance_matrix[u_idx][m_idx] = row.relevance 
