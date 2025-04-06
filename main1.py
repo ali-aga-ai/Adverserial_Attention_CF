@@ -17,6 +17,8 @@ EPOCHS = 20
 BATCH_SIZE = 1024
 TOP_K = 10    # For evaluation
 
+TARGET_USER_ID = 2  #for pinting top10 recommendations
+
 def load_movielens_100k():
     df = pd.read_csv("https://files.grouplens.org/datasets/movielens/ml-100k/u.data", sep='\t', header=None)
     df.columns = ["user", "item", "rating", "timestamp"]
@@ -121,6 +123,9 @@ def evaluate(generator, test_data, train_data, top_k=TOP_K):
         top_items = np.argpartition(scores, -top_k)[-top_k:]
         top_items = top_items[np.argsort(-scores[top_items])]
 
+        if user == TARGET_USER_ID:
+            print(f"User {user} → Top-{top_k} Recommended Items: {top_items.tolist()}")
+
         hits = [1 if item in test_items else 0 for item in top_items]
         HR.append(np.sum(hits))
         NDCG.append(np.sum([hit / np.log2(idx+2) for idx, hit in enumerate(hits)]))
@@ -142,7 +147,6 @@ for epoch in range(EPOCHS):
         users = users.to(DEVICE)
         pos_items = pos_items.to(DEVICE)
 
-        # Generator forward pass
         gen_scores = gen(users)  # (B, n_items)
         attn_items = sample_attentive_items(gen_scores)  # (B, l)
         attn_weights = torch.gather(gen_scores, 1, attn_items)
@@ -167,5 +171,6 @@ for epoch in range(EPOCHS):
         opt_gen.step()
         total_loss_g += loss_g.item()
 
+    print(f"\n[Epoch {epoch+1}] BPR Loss - Discriminator: {total_loss_d:.4f} | Generator: {total_loss_g:.4f}")
     hr, ndcg = evaluate(gen, test_data, train_data)
-    print(f"Epoch {epoch+1}: Disc Loss={total_loss_d:.4f}, Gen Loss={total_loss_g:.4f}, HR@{TOP_K}={hr:.4f}, NDCG@{TOP_K}={ndcg:.4f}")
+    print(f"[Epoch {epoch+1}] HR@{TOP_K} = {hr:.4f}, NDCG@{TOP_K} = {ndcg:.4f}\n")
